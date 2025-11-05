@@ -33,7 +33,8 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255, blank=True)
-
+    phone_number = models.CharField(max_length=20, blank=True)
+    nic_image_link = models.URLField(blank=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
