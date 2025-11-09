@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { vehicleAPI } from "@/lib/api";
-import Navbar from "../components/Navbar";
-import LoadingSpinner from "../components/LoadingSpinner";
-import VerificationModal from "../components/VerificationModal";
+import Navbar from "../../../components/Navbar";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 
-export default function PostVehicle() {
+export default function EditVehiclePage() {
   const router = useRouter();
+  const params = useParams();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { startNavigating } = useNavigation();
   
@@ -28,47 +28,69 @@ export default function PostVehicle() {
     price: "",
   });
   
-  const [vehicleImages, setVehicleImages] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
+  const [vehicleImage, setVehicleImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [currentImage, setCurrentImage] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  
-  // Verification states
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [verificationResult, setVerificationResult] = useState(null);
-  const [createdVehicleId, setCreatedVehicleId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
+    } else if (isAuthenticated && params?.id) {
+      fetchVehicle();
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, params?.id, router]);
+
+  const fetchVehicle = async () => {
+    try {
+      setLoading(true);
+      const data = await vehicleAPI.getVehicle(params.id);
+      
+      // Populate form data
+      setFormData({
+        manufacturer: data.manufacturer || "",
+        model: data.model || "",
+        city: data.city || "",
+        plate_number: data.plate_number || "",
+        year: data.year || "",
+        vehicle_type: data.vehicle_type || "",
+        engine_capacity: data.engine_capacity || "",
+        transmission: data.transmission || "",
+        fuel_type: data.fuel_type || "",
+        mileage: data.mileage || "",
+        price: data.price || "",
+      });
+      
+      // Set current image - check multiple possible sources
+      const imageUrl = data.primary_image?.image_url || 
+                       (data.images && data.images.length > 0 ? data.images[0].image_url : null) ||
+                       data.image_url;
+      setCurrentImage(imageUrl);
+    } catch (err) {
+      setError("Failed to load vehicle. " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      setVehicleImages(files);
-      const previews = files.map(file => URL.createObjectURL(file));
-      setImagePreviews(previews);
+    const file = e.target.files[0];
+    if (file) {
+      setVehicleImage(file);
+      setImagePreview(URL.createObjectURL(file));
     }
-  };
-
-  const removeImage = (index) => {
-    const newImages = vehicleImages.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    setVehicleImages(newImages);
-    setImagePreviews(newPreviews);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       const data = new FormData();
@@ -80,109 +102,50 @@ export default function PostVehicle() {
         }
       });
       
-      // Append images if exist
-      vehicleImages.forEach((image) => {
-        data.append("images", image);
-      });
-
-      // Create the vehicle
-      const createdVehicle = await vehicleAPI.createVehicle(data);
-      setCreatedVehicleId(createdVehicle.id);
-      
-      // If vehicle has images, trigger verification automatically
-      if (vehicleImages.length > 0) {
-        setShowVerificationModal(true);
-        
-        // Set initial verification state
-        setVerificationResult({
-          verification_status: 'in_progress',
-          verification_result: null
-        });
-        
-        // Trigger verification
-        try {
-          const verificationResponse = await vehicleAPI.verifyVehicle(createdVehicle.id);
-          
-          setVerificationResult({
-            verification_status: verificationResponse.verification_status,
-            verification_result: verificationResponse.verification_result
-          });
-          
-        } catch (verifyError) {
-          console.error("Verification error:", verifyError);
-          setVerificationResult({
-            verification_status: 'failed',
-            verification_result: {
-              error_message: verifyError.message || "Verification failed"
-            }
-          });
-        }
-      } else {
-        // No images, skip verification and navigate directly
-        alert("Vehicle posted successfully!");
-        startNavigating();
-        router.push("/my-ads");
+      // Append new image if exists
+      if (vehicleImage) {
+        data.append("image", vehicleImage);
       }
+
+      await vehicleAPI.updateVehicle(params.id, data);
       
-      setLoading(false);
+      alert("Vehicle updated successfully!");
+      // Show loading bar and navigate
+      startNavigating();
+      router.push("/my-ads");
       
     } catch (err) {
-      setError(err.message || "Failed to post vehicle. Please try again.");
-      setLoading(false);
+      setError(err.message || "Failed to update vehicle. Please try again.");
+      setSubmitting(false);
     }
   };
 
-  const handleVerificationClose = () => {
-    setShowVerificationModal(false);
-    
-    // Navigate to my-ads based on verification status
-    const status = verificationResult?.verification_status;
-    
-    if (status === 'verified') {
-      alert("🎉 Vehicle verified and posted successfully!");
-    } else if (status === 'manual_review') {
-      alert("⚠️ Your vehicle is pending manual review. You'll be notified once approved.");
-    } else if (status === 'failed') {
-      alert("❌ Verification failed. Your listing has been saved but may need corrections.");
-    }
-    
-    startNavigating();
-    router.push("/my-ads");
-  };
-
-  const handleVerificationRetry = async () => {
-    if (!createdVehicleId) return;
-    
-    setVerificationResult({
-      verification_status: 'in_progress',
-      verification_result: null
-    });
-    
-    try {
-      const retryResponse = await vehicleAPI.retryVerification(createdVehicleId);
-      
-      setVerificationResult({
-        verification_status: retryResponse.verification_status,
-        verification_result: retryResponse.verification_result
-      });
-      
-    } catch (error) {
-      console.error("Retry verification error:", error);
-      setVerificationResult({
-        verification_status: 'failed',
-        verification_result: {
-          error_message: error.message || "Retry failed"
-        }
-      });
-    }
-  };
-
-  if (authLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner size="lg" text="Checking authentication..." />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
+            {/* Header Skeleton */}
+            <div className="h-10 bg-gray-200 rounded w-64 mx-auto mb-6 animate-pulse"></div>
+
+            {/* Form Skeleton */}
+            <div className="space-y-6 animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-12 bg-gray-100 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Loading Spinner */}
+            <div className="flex justify-center mt-12">
+              <LoadingSpinner size="lg" text="Loading vehicle data..." />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -196,19 +159,10 @@ export default function PostVehicle() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      {/* Verification Modal */}
-      <VerificationModal
-        isOpen={showVerificationModal}
-        vehicleId={createdVehicleId}
-        verificationResult={verificationResult}
-        onClose={handleVerificationClose}
-        onRetry={handleVerificationRetry}
-      />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
           <h1 className="text-3xl font-bold text-center text-purple-700 mb-6">
-            🚗 Post Your Vehicle
+            ✏️ Edit Vehicle
           </h1>
 
           {error && (
@@ -375,56 +329,64 @@ export default function PostVehicle() {
               />
             </div>
 
-            {/* Images Upload */}
+            {/* Image Upload */}
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Vehicle Images (Multiple)</label>
+              <label className="block text-gray-700 font-medium mb-2">Vehicle Image</label>
+              
+              {/* Current Image */}
+              {currentImage && !imagePreview && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">Current Image:</p>
+                  <img
+                    src={currentImage}
+                    alt="Current vehicle"
+                    className="max-w-md rounded-lg border-2 border-gray-300"
+                  />
+                </div>
+              )}
+              
               <input
                 type="file"
                 accept="image/*"
-                multiple
                 onChange={handleImageChange}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               />
-              <p className="text-sm text-gray-500 mt-1">Select multiple images (first image will be primary)</p>
+              <p className="text-sm text-gray-500 mt-1">Leave empty to keep current image</p>
               
-              {imagePreviews.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
-                      />
-                      {index === 0 && (
-                        <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                          Primary
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+              {/* New Image Preview */}
+              {imagePreview && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">New Image Preview:</p>
+                  <img
+                    src={imagePreview}
+                    alt="New preview"
+                    className="max-w-md rounded-lg border-2 border-gray-300"
+                  />
                 </div>
               )}
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-yellow-400 text-purple-900 font-bold text-lg px-6 py-4 rounded-lg hover:bg-yellow-500 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? "Posting..." : "🚗 Post Vehicle"}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-blue-600 text-white font-bold text-lg px-6 py-4 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Updating..." : "✏️ Update Vehicle"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-6 py-4 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>
     </div>
   );
 }
+

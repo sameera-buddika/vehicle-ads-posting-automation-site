@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Vehicle, VehicleCategory
 from .serializers import VehicleSerializer, VehicleCategorySerializer
 import jwt
@@ -30,53 +32,88 @@ class VehicleCategoryView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VehicleListCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser]  # to allow file uploads
 
     def get(self, request):
-        # Optional public listing: allow unauthenticated GET by removing the auth check below
-        # Here we require auth (same pattern as user endpoints)
-        _ = get_user_id_from_request(request)
-
+        # Public listing - no authentication required for browsing
         mine = request.query_params.get('mine', 'false').lower() == 'true'
+        
         if mine:
+            # Only require auth when filtering for user's own vehicles
             user_id = get_user_id_from_request(request)
             qs = Vehicle.objects.filter(posted_by_id=user_id).order_by('-created_at')
         else:
+            # Public listing - anyone can browse
             qs = Vehicle.objects.all().order_by('-created_at')
 
         serializer = VehicleSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):
+        from .models import VehicleImage
+        
         user_id = get_user_id_from_request(request)
         data = request.data.copy()
-        data['posted_by'] = user_id
-
+        
+        # Remove images from data as we'll handle them separately
+        images = request.FILES.getlist('images')
+        
+        # Create vehicle
         serializer = VehicleSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        vehicle = serializer.save(posted_by_id=user_id)
+        
+        # Add images
+        for index, image_file in enumerate(images):
+            VehicleImage.objects.create(
+                vehicle=vehicle,
+                image=image_file,
+                is_primary=(index == 0)  # First image is primary
+            )
+        
+        # Return updated vehicle with images
+        updated_serializer = VehicleSerializer(vehicle, context={'request': request})
+        return Response(updated_serializer.data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VehicleDetailView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request, ad_id):
-        _ = get_user_id_from_request(request)
+        # Public view - no authentication required to view vehicle details
         vehicle = get_object_or_404(Vehicle, id=ad_id)
         serializer = VehicleSerializer(vehicle, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request, ad_id):
+        from .models import VehicleImage
+        
         user_id = get_user_id_from_request(request)
         vehicle = get_object_or_404(Vehicle, id=ad_id)
         if vehicle.posted_by_id != user_id:
             return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
 
         data = request.data.copy()
-        data['posted_by'] = vehicle.posted_by_id  # prevent change of owner
+        
+        # Handle new images if provided
+        images = request.FILES.getlist('images')
+        if images:
+            # Optional: delete old images or keep them
+            # vehicle.images.all().delete()  # Uncomment to replace all images
+            
+            # Add new images
+            existing_count = vehicle.images.count()
+            for index, image_file in enumerate(images):
+                VehicleImage.objects.create(
+                    vehicle=vehicle,
+                    image=image_file,
+                    is_primary=(existing_count == 0 and index == 0)
+                )
 
+        # Update vehicle data
         serializer = VehicleSerializer(vehicle, data=data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -88,4 +125,20 @@ class VehicleDetailView(APIView):
         if vehicle.posted_by_id != user_id:
             return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
         vehicle.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class VehicleImageDeleteView(APIView):
+    def delete(self, request, image_id):
+        from .models import VehicleImage
+        
+        user_id = get_user_id_from_request(request)
+        image = get_object_or_404(VehicleImage, id=image_id)
+        
+        # Check if user owns the vehicle
+        if image.vehicle.posted_by_id != user_id:
+            return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+        
+        image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

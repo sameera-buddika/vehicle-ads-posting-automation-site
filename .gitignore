@@ -8,3 +8,6 @@ __pycache__/
 .idea/
 *.log
 .node_modules/
+.env
+staticfiles/
+media/

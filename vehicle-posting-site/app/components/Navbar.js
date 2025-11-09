@@ -1,36 +1,85 @@
-import Link from "next/link";
+'use client';
+
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 
 export default function Navbar() {
-  return (
-    <nav className="bg-purple-700 text-white px-6 py-4 flex items-center justify-between shadow-md">
-      {/* ✅ Left side brand or categories */}
-      <div className="flex space-x-6">
-        
-        <Link href="/cars" className="hover:text-gray-200">Cars</Link>
-        <Link href="/suv" className="hover:text-gray-200">SUV</Link>
-        <Link href="/van" className="hover:text-gray-200">Van</Link>
-        <Link href="/bikes" className="hover:text-gray-200">Bikes</Link>
-        <Link href="/Three Wheel" className="hover:text-gray-200">Three Wheel</Link>
-        <Link href="/Trucks" className="hover:text-gray-200">Trucks</Link>
-      </div>
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { startNavigating } = useNavigation();
 
-      {/* ✅ Right side buttons */}
-      <div className="flex space-x-4">
-        <Link href="/post">
-          <button className="bg-yellow-400 text-purple-900 font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500 transition">
-            🚗 Post Your Vehicle
+  const handleNavigation = (path) => {
+    startNavigating();
+    router.push(path);
+  };
+
+  const handleLogout = async () => {
+    startNavigating();
+    await logout();
+  };
+
+  return (
+    <nav className="bg-purple-700 text-white px-6 py-4 shadow-md">
+      <div className="container mx-auto flex items-center justify-between">
+        {/* Left side - Brand and Categories */}
+        <div className="flex items-center space-x-6">
+          <button 
+            onClick={() => handleNavigation("/")}
+            className="text-2xl font-bold hover:text-yellow-400 transition-all duration-200 active:scale-95 transform"
+          >
+            🚗 VehicleAds
           </button>
-        </Link>
-        <Link href="/login">
-          <button className="bg-gray-200 text-purple-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-            🔑 Login
-          </button>
-        </Link>
-        <Link href="/register">
-          <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-            📝 Register
-          </button>
-        </Link>
+          <div className="hidden md:flex space-x-4">
+            <button onClick={() => handleNavigation("/vehicles")} className="hover:text-yellow-400 transition-all duration-200 active:scale-95 transform">All Vehicles</button>
+            <button onClick={() => handleNavigation("/vehicles?category=cars")} className="hover:text-yellow-400 transition-all duration-200 active:scale-95 transform">Cars</button>
+            <button onClick={() => handleNavigation("/vehicles?category=suv")} className="hover:text-yellow-400 transition-all duration-200 active:scale-95 transform">SUV</button>
+            <button onClick={() => handleNavigation("/vehicles?category=van")} className="hover:text-yellow-400 transition-all duration-200 active:scale-95 transform">Van</button>
+            <button onClick={() => handleNavigation("/vehicles?category=bikes")} className="hover:text-yellow-400 transition-all duration-200 active:scale-95 transform">Bikes</button>
+          </div>
+        </div>
+
+        {/* Right side - Auth buttons */}
+        <div className="flex items-center space-x-4">
+          {isAuthenticated ? (
+            <>
+              <span className="text-sm">Welcome, {user?.name || user?.email}!</span>
+              <button 
+                onClick={() => handleNavigation("/my-ads")}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 hover:shadow-lg transition-all duration-200 active:scale-95 transform"
+              >
+                📋 My Ads
+              </button>
+              <button 
+                onClick={() => handleNavigation("/post")}
+                className="bg-yellow-400 text-purple-900 font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500 hover:shadow-lg transition-all duration-200 active:scale-95 transform"
+              >
+                🚗 Post Vehicle
+              </button>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 hover:shadow-lg transition-all duration-200 active:scale-95 transform"
+              >
+                🚪 Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => handleNavigation("/login")}
+                className="bg-gray-200 text-purple-900 px-4 py-2 rounded-lg hover:bg-gray-300 hover:shadow-md transition-all duration-200 active:scale-95 transform"
+              >
+                🔑 Login
+              </button>
+              <button 
+                onClick={() => handleNavigation("/register")}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 hover:shadow-lg transition-all duration-200 active:scale-95 transform"
+              >
+                📝 Register
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </nav>
   );

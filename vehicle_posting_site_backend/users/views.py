@@ -1,12 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .serializers import UserSerializer
 from .models import User
 import jwt, datetime
 
 
 # Create your views here.
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -20,6 +23,7 @@ class RegisterView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     def post(self, request):
         email = request.data['email']
@@ -39,7 +43,9 @@ class LoginView(APIView):
             'iat': datetime.datetime.utcnow()
         }
 
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        from django.conf import settings
+        jwt_secret = getattr(settings, 'JWT_SECRET', settings.SECRET_KEY)
+        token = jwt.encode(payload, jwt_secret, algorithm='HS256')
 
         response = Response()
 
@@ -55,18 +61,26 @@ class UserView(APIView):
         token = request.COOKIES.get('jwt')
 
         if not token:
-            raise AuthenticationFailed('Unauthenticated!')
+            return Response({'detail': 'Unauthenticated!'}, status=401)
 
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+            from django.conf import settings
+            jwt_secret = getattr(settings, 'JWT_SECRET', settings.SECRET_KEY)
+            payload = jwt.decode(token, jwt_secret, algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Unauthenticated!')
+            return Response({'detail': 'Token expired!'}, status=401)
+        except jwt.InvalidTokenError:
+            return Response({'detail': 'Invalid token!'}, status=401)
 
         user = User.objects.filter(id=payload['id']).first()
+        
+        if not user:
+            return Response({'detail': 'User not found!'}, status=404)
 
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
     def post(self, request):
         response = Response()
