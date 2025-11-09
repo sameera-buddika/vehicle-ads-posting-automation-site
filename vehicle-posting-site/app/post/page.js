@@ -7,6 +7,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { vehicleAPI } from "@/lib/api";
 import Navbar from "../components/Navbar";
 import LoadingSpinner from "../components/LoadingSpinner";
+import VerificationModal from "../components/VerificationModal";
 
 export default function PostVehicle() {
   const router = useRouter();
@@ -31,6 +32,11 @@ export default function PostVehicle() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Verification states
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [createdVehicleId, setCreatedVehicleId] = useState(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -79,16 +85,95 @@ export default function PostVehicle() {
         data.append("images", image);
       });
 
-      await vehicleAPI.createVehicle(data);
+      // Create the vehicle
+      const createdVehicle = await vehicleAPI.createVehicle(data);
+      setCreatedVehicleId(createdVehicle.id);
       
-      alert("Vehicle posted successfully!");
-      // Show loading bar and navigate
-      startNavigating();
-      router.push("/my-ads");
+      // If vehicle has images, trigger verification automatically
+      if (vehicleImages.length > 0) {
+        setShowVerificationModal(true);
+        
+        // Set initial verification state
+        setVerificationResult({
+          verification_status: 'in_progress',
+          verification_result: null
+        });
+        
+        // Trigger verification
+        try {
+          const verificationResponse = await vehicleAPI.verifyVehicle(createdVehicle.id);
+          
+          setVerificationResult({
+            verification_status: verificationResponse.verification_status,
+            verification_result: verificationResponse.verification_result
+          });
+          
+        } catch (verifyError) {
+          console.error("Verification error:", verifyError);
+          setVerificationResult({
+            verification_status: 'failed',
+            verification_result: {
+              error_message: verifyError.message || "Verification failed"
+            }
+          });
+        }
+      } else {
+        // No images, skip verification and navigate directly
+        alert("Vehicle posted successfully!");
+        startNavigating();
+        router.push("/my-ads");
+      }
+      
+      setLoading(false);
       
     } catch (err) {
       setError(err.message || "Failed to post vehicle. Please try again.");
       setLoading(false);
+    }
+  };
+
+  const handleVerificationClose = () => {
+    setShowVerificationModal(false);
+    
+    // Navigate to my-ads based on verification status
+    const status = verificationResult?.verification_status;
+    
+    if (status === 'verified') {
+      alert("🎉 Vehicle verified and posted successfully!");
+    } else if (status === 'manual_review') {
+      alert("⚠️ Your vehicle is pending manual review. You'll be notified once approved.");
+    } else if (status === 'failed') {
+      alert("❌ Verification failed. Your listing has been saved but may need corrections.");
+    }
+    
+    startNavigating();
+    router.push("/my-ads");
+  };
+
+  const handleVerificationRetry = async () => {
+    if (!createdVehicleId) return;
+    
+    setVerificationResult({
+      verification_status: 'in_progress',
+      verification_result: null
+    });
+    
+    try {
+      const retryResponse = await vehicleAPI.retryVerification(createdVehicleId);
+      
+      setVerificationResult({
+        verification_status: retryResponse.verification_status,
+        verification_result: retryResponse.verification_result
+      });
+      
+    } catch (error) {
+      console.error("Retry verification error:", error);
+      setVerificationResult({
+        verification_status: 'failed',
+        verification_result: {
+          error_message: error.message || "Retry failed"
+        }
+      });
     }
   };
 
@@ -110,6 +195,15 @@ export default function PostVehicle() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
+      
+      {/* Verification Modal */}
+      <VerificationModal
+        isOpen={showVerificationModal}
+        vehicleId={createdVehicleId}
+        verificationResult={verificationResult}
+        onClose={handleVerificationClose}
+        onRetry={handleVerificationRetry}
+      />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto bg-white shadow-2xl rounded-2xl p-8">

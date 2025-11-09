@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Vehicle, VehicleCategory
 from .serializers import VehicleSerializer, VehicleCategorySerializer
 import jwt
@@ -30,6 +32,7 @@ class VehicleCategoryView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VehicleListCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser]  # to allow file uploads
 
@@ -75,6 +78,7 @@ class VehicleListCreateView(APIView):
         return Response(updated_serializer.data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VehicleDetailView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
@@ -124,6 +128,7 @@ class VehicleDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class VehicleImageDeleteView(APIView):
     def delete(self, request, image_id):
         from .models import VehicleImage

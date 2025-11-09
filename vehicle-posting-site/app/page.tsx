@@ -26,8 +26,12 @@ export default function Home() {
     try {
       setLoadingVehicles(true);
       const data = await vehicleAPI.getVehicles();
-      // Get only the 6 most recent vehicles
-      setRecentVehicles(data.slice(0, 6));
+      // Filter to only show verified vehicles in public listing
+      const verifiedVehicles = data.filter(
+        (vehicle: any) => vehicle.verification_status === 'verified'
+      );
+      // Get only the 6 most recent verified vehicles
+      setRecentVehicles(verifiedVehicles.slice(0, 6));
     } catch (err) {
       console.error("Failed to fetch vehicles:", err);
       // Don't show error to user on home page - just show empty state
@@ -95,8 +99,14 @@ export default function Home() {
 
       {/* Recent Listings Section */}
       <section className="container mx-auto px-4 py-12">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-purple-700">Recent Listings</h2>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-3xl font-bold text-purple-700">Recent Listings</h2>
+            <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+              <span>✓</span>
+              <span>Showing verified vehicles only</span>
+            </p>
+          </div>
           <button 
             onClick={() => handleNavigation("/vehicles")}
             className="text-purple-700 hover:underline font-semibold"

@@ -142,6 +142,31 @@ export const vehicleAPI = {
       method: 'GET',
     });
   },
+
+  // Verification APIs
+  verifyVehicle: async (vehicleId) => {
+    return apiFetch(`/api/vehicles/${vehicleId}/verify/`, {
+      method: 'POST',
+    });
+  },
+
+  getVerificationStatus: async (vehicleId) => {
+    return apiFetch(`/api/vehicles/${vehicleId}/verification-status/`, {
+      method: 'GET',
+    });
+  },
+
+  getVerificationHistory: async (vehicleId) => {
+    return apiFetch(`/api/vehicles/${vehicleId}/verification-history/`, {
+      method: 'GET',
+    });
+  },
+
+  retryVerification: async (vehicleId) => {
+    return apiFetch(`/api/vehicles/${vehicleId}/retry-verification/`, {
+      method: 'POST',
+    });
+  },
 };
 
 export default { authAPI, vehicleAPI };

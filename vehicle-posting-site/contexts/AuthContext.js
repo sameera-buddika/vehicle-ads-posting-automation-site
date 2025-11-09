@@ -41,10 +41,24 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authAPI.login(email, password);
-      await checkAuth(); // Fetch user data after login
-      return { success: true };
+      
+      // Wait a bit for cookie to be set, then fetch user data
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch user data after login
+      try {
+        const userData = await authAPI.getCurrentUser();
+        setUser(userData);
+        return { success: true, user: userData };
+      } catch (authError) {
+        // If getCurrentUser fails, still return success if login worked
+        // The cookie is set, so user is logged in
+        console.warn('Could not fetch user data immediately:', authError);
+        return { success: true };
+      }
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Login failed. Please check your credentials.' };
     }
   };
 

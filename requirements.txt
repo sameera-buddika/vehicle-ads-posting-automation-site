@@ -14,9 +14,5 @@ PyJWT>=2.8.0
 # Image handling (for vehicle images)
 Pillow>=10.0.0
 
-# AI & Verification
-openai>=1.12.0
-python-dotenv>=1.0.0
-
 # Utilities
 python-dateutil>=2.8.2

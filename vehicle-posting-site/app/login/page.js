@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const { startNavigating } = useNavigation();
   const [formData, setFormData] = useState({
     email: "",
@@ -15,6 +15,13 @@ export default function LoginPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace("/vehicles");
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,16 +34,29 @@ export default function LoginPage() {
 
     try {
       const result = await login(formData.email, formData.password);
-      if (result.success) {
-        // Show loading bar and navigate
+      
+      if (result && result.success) {
+        // Show loading bar
         startNavigating();
-        router.push("/vehicles");
+        
+        // Wait a moment for auth state to update
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Try router navigation first
+        try {
+          router.replace("/vehicles");
+        } catch (routerError) {
+          console.warn("Router navigation failed, using window.location:", routerError);
+          // Fallback to window.location if router fails
+          window.location.href = "/vehicles";
+        }
       } else {
-        setError(result.error || "Login failed. Please check your credentials.");
+        setError(result?.error || result?.message || "Login failed. Please check your credentials.");
         setLoading(false);
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      console.error("Login error:", err);
+      setError(err.message || "An error occurred. Please try again.");
       setLoading(false);
     }
   };

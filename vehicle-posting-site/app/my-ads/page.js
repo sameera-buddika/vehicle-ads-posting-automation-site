@@ -117,6 +117,21 @@ export default function MyAdsPage() {
             </Button>
           }
         />
+        
+        {/* Info Banner */}
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div>
+              <p className="font-semibold text-blue-900 mb-1">Verification Status Information</p>
+              <p className="text-sm text-blue-800">
+                Only <span className="font-semibold text-green-600">✓ Verified</span> vehicles are visible in public listings. 
+                Vehicles with <span className="font-semibold text-yellow-600">⚠ Under Review</span> or <span className="font-semibold text-red-600">✗ Failed</span> status 
+                are only visible to you until verified.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Error Message */}
         {error && (

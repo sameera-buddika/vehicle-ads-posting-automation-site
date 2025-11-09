@@ -1,0 +1,365 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import LoadingSpinner from './LoadingSpinner';
+
+export default function VerificationModal({ 
+  isOpen, 
+  vehicleId, 
+  verificationResult,
+  onClose,
+  onRetry 
+}) {
+  if (!isOpen) return null;
+
+  const getStatusConfig = () => {
+    const status = verificationResult?.verification_status || 'in_progress';
+    
+    const configs = {
+      in_progress: {
+        title: 'Verifying Your Vehicle...',
+        icon: '🔍',
+        color: 'blue',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        textColor: 'text-blue-900',
+        showSpinner: true,
+      },
+      verified: {
+        title: 'Verification Successful!',
+        icon: '✅',
+        color: 'green',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        textColor: 'text-green-900',
+        showSpinner: false,
+      },
+      manual_review: {
+        title: 'Manual Review Required',
+        icon: '⚠️',
+        color: 'yellow',
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-200',
+        textColor: 'text-yellow-900',
+        showSpinner: false,
+      },
+      failed: {
+        title: 'Verification Failed',
+        icon: '❌',
+        color: 'red',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
+        textColor: 'text-red-900',
+        showSpinner: false,
+      },
+      pending: {
+        title: 'Pending Verification',
+        icon: '⏳',
+        color: 'gray',
+        bgColor: 'bg-gray-50',
+        borderColor: 'border-gray-200',
+        textColor: 'text-gray-900',
+        showSpinner: false,
+      },
+    };
+
+    return configs[status] || configs.pending;
+  };
+
+  const config = getStatusConfig();
+  const result = verificationResult?.verification_result;
+  const score = result?.overall_confidence_score;
+
+  const getScoreColor = (score) => {
+    if (score >= 70) return 'text-green-600';
+    if (score >= 50) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getScoreBarColor = (score) => {
+    if (score >= 70) return 'bg-green-500';
+    if (score >= 50) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className={`${config.bgColor} border-b-2 ${config.borderColor} p-6 rounded-t-2xl`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-5xl">{config.icon}</span>
+              <div>
+                <h2 className={`text-2xl font-bold ${config.textColor}`}>
+                  {config.title}
+                </h2>
+                {config.showSpinner && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Please wait while we verify your vehicle details...
+                  </p>
+                )}
+              </div>
+            </div>
+            {!config.showSpinner && (
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Loading State */}
+          {config.showSpinner && (
+            <div className="flex flex-col items-center py-8">
+              <LoadingSpinner size="lg" />
+              <p className="text-gray-600 mt-4">
+                Analyzing your vehicle images with AI...
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                This usually takes 5-10 seconds
+              </p>
+            </div>
+          )}
+
+          {/* Verification Score */}
+          {score !== undefined && score !== null && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700">Confidence Score:</span>
+                <span className={`text-3xl font-bold ${getScoreColor(score)}`}>
+                  {score.toFixed(1)}%
+                </span>
+              </div>
+              
+              {/* Score Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div 
+                  className={`h-full ${getScoreBarColor(score)} transition-all duration-500`}
+                  style={{ width: `${score}%` }}
+                />
+              </div>
+              
+              {/* Score Interpretation */}
+              <div className="text-sm text-gray-600">
+                {score >= 70 && (
+                  <p className="text-green-600 font-medium">
+                    ✓ Excellent match! Your listing has been verified successfully.
+                  </p>
+                )}
+                {score >= 50 && score < 70 && (
+                  <p className="text-yellow-600 font-medium">
+                    ⚠ Good match, but requires manual review for final approval.
+                  </p>
+                )}
+                {score < 50 && (
+                  <p className="text-red-600 font-medium">
+                    ✗ Verification failed. Please check your details and images.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI Detection Results */}
+          {result && (
+            <div className="border-t pt-6">
+              <h3 className="font-semibold text-lg mb-4 text-gray-800">
+                AI Detection Results
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {result.ai_detected_brand && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500 uppercase">Detected Brand</p>
+                    <p className="font-semibold text-gray-800">{result.ai_detected_brand}</p>
+                  </div>
+                )}
+                
+                {result.ai_detected_model && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500 uppercase">Detected Model</p>
+                    <p className="font-semibold text-gray-800">{result.ai_detected_model}</p>
+                  </div>
+                )}
+                
+                {result.ai_detected_vehicle_type && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500 uppercase">Detected Type</p>
+                    <p className="font-semibold text-gray-800">{result.ai_detected_vehicle_type}</p>
+                  </div>
+                )}
+                
+                {result.ai_detected_fuel_type && (
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500 uppercase">Detected Fuel Type</p>
+                    <p className="font-semibold text-gray-800">{result.ai_detected_fuel_type}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Match Scores */}
+          {result && (result.brand_match_score !== null || result.model_match_score !== null) && (
+            <div className="border-t pt-6">
+              <h3 className="font-semibold text-lg mb-4 text-gray-800">
+                Match Scores
+              </h3>
+              
+              <div className="space-y-3">
+                {result.brand_match_score !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Brand Match</span>
+                      <span className={`font-semibold ${getScoreColor(result.brand_match_score)}`}>
+                        {result.brand_match_score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-full ${getScoreBarColor(result.brand_match_score)} rounded-full`}
+                        style={{ width: `${result.brand_match_score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {result.model_match_score !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Model Match</span>
+                      <span className={`font-semibold ${getScoreColor(result.model_match_score)}`}>
+                        {result.model_match_score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-full ${getScoreBarColor(result.model_match_score)} rounded-full`}
+                        style={{ width: `${result.model_match_score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {result.vehicle_type_match_score !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Vehicle Type Match</span>
+                      <span className={`font-semibold ${getScoreColor(result.vehicle_type_match_score)}`}>
+                        {result.vehicle_type_match_score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-full ${getScoreBarColor(result.vehicle_type_match_score)} rounded-full`}
+                        style={{ width: `${result.vehicle_type_match_score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {result.fuel_type_match_score !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Fuel Type Match</span>
+                      <span className={`font-semibold ${getScoreColor(result.fuel_type_match_score)}`}>
+                        {result.fuel_type_match_score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-full ${getScoreBarColor(result.fuel_type_match_score)} rounded-full`}
+                        style={{ width: `${result.fuel_type_match_score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Discrepancies */}
+          {result?.discrepancies && result.discrepancies.length > 0 && (
+            <div className="border-t pt-6">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>Issues Found</span>
+              </h3>
+              <ul className="space-y-2">
+                {result.discrepancies.map((issue, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>{issue}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* AI Suggestions */}
+          {result?.ai_suggestions && (
+            <div className="border-t pt-6">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800 flex items-center gap-2">
+                <span>💡</span>
+                <span>Suggestions</span>
+              </h3>
+              <p className="text-sm text-gray-700 bg-blue-50 p-4 rounded-lg">
+                {result.ai_suggestions}
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {!config.showSpinner && (
+            <div className="border-t pt-6 flex gap-3">
+              {verificationResult?.verification_status === 'failed' && onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold"
+                >
+                  🔄 Retry Verification
+                </button>
+              )}
+              
+              {verificationResult?.verification_status === 'verified' && (
+                <button
+                  onClick={onClose}
+                  className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition font-semibold"
+                >
+                  ✓ Continue to My Ads
+                </button>
+              )}
+              
+              {verificationResult?.verification_status === 'manual_review' && (
+                <button
+                  onClick={onClose}
+                  className="flex-1 bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition font-semibold"
+                >
+                  Continue (Pending Review)
+                </button>
+              )}
+              
+              {verificationResult?.verification_status !== 'verified' && 
+               verificationResult?.verification_status !== 'manual_review' &&
+               verificationResult?.verification_status !== 'failed' && (
+                <button
+                  onClick={onClose}
+                  className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition font-semibold"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

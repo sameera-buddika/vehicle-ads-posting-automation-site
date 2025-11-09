@@ -34,8 +34,12 @@ export default function VehiclesPage() {
     try {
       setLoading(true);
       const data = await vehicleAPI.getVehicles();
-      setVehicles(data);
-      setFilteredVehicles(data);
+      // Filter to only show verified vehicles in public listing
+      const verifiedVehicles = data.filter(
+        (vehicle) => vehicle.verification_status === 'verified'
+      );
+      setVehicles(verifiedVehicles);
+      setFilteredVehicles(verifiedVehicles);
     } catch (err) {
       setError("Failed to load vehicles. Please try again later.");
       console.error(err);
@@ -120,7 +124,11 @@ export default function VehiclesPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-purple-700 mb-2">Browse Vehicles</h1>
-          <p className="text-gray-600">Find your perfect vehicle from our listings</p>
+          <p className="text-gray-600 mb-1">Find your perfect vehicle from our listings</p>
+          <p className="text-sm text-green-600 flex items-center justify-center gap-1">
+            <span>✓</span>
+            <span>All listings are AI-verified for quality and accuracy</span>
+          </p>
         </div>
 
         {/* Filters */}
