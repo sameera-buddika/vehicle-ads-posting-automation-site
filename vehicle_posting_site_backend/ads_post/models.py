@@ -22,9 +22,20 @@ class Vehicle(models.Model):
     fuel_type = models.CharField(max_length=50, blank=True, null=True)
     mileage = models.CharField(max_length=50, blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    image = models.ImageField(upload_to='vehicles/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.manufacturer} {self.model}"
+
+class VehicleImage(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='vehicles/')
+    is_primary = models.BooleanField(default=False)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_primary', 'uploaded_at']
+
+    def __str__(self):
+        return f"Image for {self.vehicle}"

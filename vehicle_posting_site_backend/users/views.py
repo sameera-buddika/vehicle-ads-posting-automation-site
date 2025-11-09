@@ -39,7 +39,9 @@ class LoginView(APIView):
             'iat': datetime.datetime.utcnow()
         }
 
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        from django.conf import settings
+        jwt_secret = getattr(settings, 'JWT_SECRET', settings.SECRET_KEY)
+        token = jwt.encode(payload, jwt_secret, algorithm='HS256')
 
         response = Response()
 
@@ -55,14 +57,21 @@ class UserView(APIView):
         token = request.COOKIES.get('jwt')
 
         if not token:
-            raise AuthenticationFailed('Unauthenticated!')
+            return Response({'detail': 'Unauthenticated!'}, status=401)
 
         try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+            from django.conf import settings
+            jwt_secret = getattr(settings, 'JWT_SECRET', settings.SECRET_KEY)
+            payload = jwt.decode(token, jwt_secret, algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Unauthenticated!')
+            return Response({'detail': 'Token expired!'}, status=401)
+        except jwt.InvalidTokenError:
+            return Response({'detail': 'Invalid token!'}, status=401)
 
         user = User.objects.filter(id=payload['id']).first()
+        
+        if not user:
+            return Response({'detail': 'User not found!'}, status=404)
 
         serializer = UserSerializer(user)
         return Response(serializer.data)
