@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await authAPI.logout();
       setUser(null);
+      // Navigate immediately - loading bar will show
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);

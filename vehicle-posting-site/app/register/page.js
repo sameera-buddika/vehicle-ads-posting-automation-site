@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
+  const { startNavigating } = useNavigation();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -53,13 +54,15 @@ export default function RegisterPage() {
       
       if (result.success) {
         alert("Registration successful! Please login.");
+        // Show loading bar and navigate
+        startNavigating();
         router.push("/login");
       } else {
         setError(result.error || "Registration failed. Please try again.");
+        setLoading(false);
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -166,15 +169,27 @@ export default function RegisterPage() {
 
         <p className="text-center text-gray-600 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-purple-700 font-semibold hover:underline">
+          <button 
+            onClick={() => {
+              startNavigating();
+              router.push("/login");
+            }}
+            className="text-purple-700 font-semibold hover:underline"
+          >
             Login
-          </Link>
+          </button>
         </p>
 
         <p className="text-center mt-4">
-          <Link href="/" className="text-sm text-gray-500 hover:underline">
+          <button 
+            onClick={() => {
+              startNavigating();
+              router.push("/");
+            }}
+            className="text-sm text-gray-500 hover:underline"
+          >
             ← Back to Home
-          </Link>
+          </button>
         </p>
       </div>
     </div>

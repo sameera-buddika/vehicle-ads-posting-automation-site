@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { vehicleAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { PageContainer, PageHeader, ContentContainer } from "../components/PageContainer";
 import { Button } from "../components/Button";
 import { Alert, EmptyState } from "../components/Alert";
@@ -13,6 +14,7 @@ import LoadingSpinner, { SkeletonListItem } from "../components/LoadingSpinner";
 export default function MyAdsPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { startNavigating } = useNavigation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -52,9 +54,20 @@ export default function MyAdsPage() {
     }
   };
 
-  const handleView = (id) => router.push(`/vehicles/${id}`);
-  const handleEdit = (id) => router.push(`/vehicles/${id}/edit`);
-  const handlePostNew = () => router.push("/post");
+  const handleView = (id) => {
+    startNavigating();
+    router.push(`/vehicles/${id}`);
+  };
+  
+  const handleEdit = (id) => {
+    startNavigating();
+    router.push(`/vehicles/${id}/edit`);
+  };
+  
+  const handlePostNew = () => {
+    startNavigating();
+    router.push("/post");
+  };
 
   // Loading State
   if (authLoading || loading) {

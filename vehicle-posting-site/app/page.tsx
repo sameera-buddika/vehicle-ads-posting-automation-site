@@ -1,14 +1,22 @@
 'use client';
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "./components/Navbar";
 import { vehicleAPI } from "@/lib/api";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { SkeletonCard } from "./components/LoadingSpinner";
 
 export default function Home() {
+  const router = useRouter();
+  const { startNavigating } = useNavigation();
   const [recentVehicles, setRecentVehicles] = useState<any[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
+
+  const handleNavigation = (path: string) => {
+    startNavigating();
+    router.push(path);
+  };
 
   useEffect(() => {
     fetchRecentVehicles();
@@ -43,16 +51,18 @@ export default function Home() {
             Browse thousands of vehicles - Cars, SUVs, Vans, Bikes, Three-Wheels, Trucks, and Lorries
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/vehicles">
-              <button className="bg-purple-700 text-white font-semibold px-8 py-4 rounded-lg hover:bg-purple-800 transition text-lg shadow-lg">
-                🔍 Browse All Vehicles
-              </button>
-            </Link>
-            <Link href="/post">
-              <button className="bg-yellow-400 text-purple-900 font-semibold px-8 py-4 rounded-lg hover:bg-yellow-500 transition text-lg shadow-lg">
-                🚗 Post Your Vehicle
-              </button>
-            </Link>
+            <button 
+              onClick={() => handleNavigation("/vehicles")}
+              className="bg-purple-700 text-white font-semibold px-8 py-4 rounded-lg hover:bg-purple-800 transition text-lg shadow-lg"
+            >
+              🔍 Browse All Vehicles
+            </button>
+            <button 
+              onClick={() => handleNavigation("/post")}
+              className="bg-yellow-400 text-purple-900 font-semibold px-8 py-4 rounded-lg hover:bg-yellow-500 transition text-lg shadow-lg"
+            >
+              🚗 Post Your Vehicle
+            </button>
           </div>
         </div>
       </section>
@@ -71,12 +81,14 @@ export default function Home() {
             { name: "Three-Wheels", icon: "🛺", link: "/vehicles?type=three-wheeler" },
             { name: "Trucks", icon: "🚚", link: "/vehicles?type=truck" },
           ].map((category) => (
-            <Link key={category.name} href={category.link}>
-              <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition p-6 text-center cursor-pointer transform hover:scale-105">
-                <div className="text-5xl mb-3">{category.icon}</div>
-                <h3 className="font-semibold text-gray-800">{category.name}</h3>
-              </div>
-            </Link>
+            <div 
+              key={category.name}
+              onClick={() => handleNavigation(category.link)}
+              className="bg-white rounded-lg shadow-md hover:shadow-xl transition p-6 text-center cursor-pointer transform hover:scale-105"
+            >
+              <div className="text-5xl mb-3">{category.icon}</div>
+              <h3 className="font-semibold text-gray-800">{category.name}</h3>
+            </div>
           ))}
         </div>
       </section>
@@ -85,9 +97,12 @@ export default function Home() {
       <section className="container mx-auto px-4 py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-purple-700">Recent Listings</h2>
-          <Link href="/vehicles" className="text-purple-700 hover:underline font-semibold">
+          <button 
+            onClick={() => handleNavigation("/vehicles")}
+            className="text-purple-700 hover:underline font-semibold"
+          >
             View All →
-          </Link>
+          </button>
         </div>
         
         {loadingVehicles ? (
@@ -99,40 +114,42 @@ export default function Home() {
         ) : recentVehicles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentVehicles.map((vehicle) => (
-              <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
-                <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition cursor-pointer overflow-hidden">
-                  <div className="h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
-                    {vehicle.primary_image?.image_url ? (
-                      <img
-                        src={vehicle.primary_image.image_url}
-                        alt={`${vehicle.manufacturer} ${vehicle.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : vehicle.images && vehicle.images.length > 0 ? (
-                      <img
-                        src={vehicle.images[0].image_url}
-                        alt={`${vehicle.manufacturer} ${vehicle.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-6xl">🚗</span>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-xl font-bold text-purple-700 mb-2">
-                      {vehicle.manufacturer} {vehicle.model}
-                    </h3>
-                    {vehicle.year && (
-                      <p className="text-gray-600 mb-2">Year: {vehicle.year}</p>
-                    )}
-                    {vehicle.price && (
-                      <p className="text-2xl font-bold text-green-600">
-                        LKR {parseFloat(vehicle.price).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
+              <div 
+                key={vehicle.id}
+                onClick={() => handleNavigation(`/vehicles/${vehicle.id}`)}
+                className="bg-white rounded-lg shadow-md hover:shadow-xl transition cursor-pointer overflow-hidden"
+              >
+                <div className="h-48 bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {vehicle.primary_image?.image_url ? (
+                    <img
+                      src={vehicle.primary_image.image_url}
+                      alt={`${vehicle.manufacturer} ${vehicle.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : vehicle.images && vehicle.images.length > 0 ? (
+                    <img
+                      src={vehicle.images[0].image_url}
+                      alt={`${vehicle.manufacturer} ${vehicle.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-6xl">🚗</span>
+                  )}
                 </div>
-              </Link>
+                <div className="p-4">
+                  <h3 className="text-xl font-bold text-purple-700 mb-2">
+                    {vehicle.manufacturer} {vehicle.model}
+                  </h3>
+                  {vehicle.year && (
+                    <p className="text-gray-600 mb-2">Year: {vehicle.year}</p>
+                  )}
+                  {vehicle.price && (
+                    <p className="text-2xl font-bold text-green-600">
+                      LKR {parseFloat(vehicle.price).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -180,16 +197,18 @@ export default function Home() {
             Join thousands of users buying and selling vehicles every day
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <button className="bg-white text-purple-700 font-semibold px-8 py-4 rounded-lg hover:bg-gray-100 transition text-lg">
-                Create Account
-              </button>
-            </Link>
-            <Link href="/vehicles">
-              <button className="bg-yellow-400 text-purple-900 font-semibold px-8 py-4 rounded-lg hover:bg-yellow-500 transition text-lg">
-                Browse Vehicles
-              </button>
-            </Link>
+            <button 
+              onClick={() => handleNavigation("/register")}
+              className="bg-white text-purple-700 font-semibold px-8 py-4 rounded-lg hover:bg-gray-100 transition text-lg"
+            >
+              Create Account
+            </button>
+            <button 
+              onClick={() => handleNavigation("/vehicles")}
+              className="bg-yellow-400 text-purple-900 font-semibold px-8 py-4 rounded-lg hover:bg-yellow-500 transition text-lg"
+            >
+              Browse Vehicles
+            </button>
           </div>
         </div>
       </section>

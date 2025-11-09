@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { vehicleAPI } from "@/lib/api";
 import Navbar from "../components/Navbar";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -10,6 +11,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 export default function PostVehicle() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { startNavigating } = useNavigation();
   
   const [formData, setFormData] = useState({
     manufacturer: "",
@@ -80,11 +82,12 @@ export default function PostVehicle() {
       await vehicleAPI.createVehicle(data);
       
       alert("Vehicle posted successfully!");
+      // Show loading bar and navigate
+      startNavigating();
       router.push("/my-ads");
       
     } catch (err) {
       setError(err.message || "Failed to post vehicle. Please try again.");
-    } finally {
       setLoading(false);
     }
   };

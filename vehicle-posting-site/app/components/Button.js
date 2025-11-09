@@ -10,16 +10,16 @@ export function Button({
   className = "",
   ...props 
 }) {
-  const baseClasses = "font-semibold rounded-lg transition duration-200 flex items-center justify-center gap-2";
+  const baseClasses = "font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 transform";
   
   const variants = {
-    primary: "bg-purple-700 text-white hover:bg-purple-800 disabled:bg-gray-400",
-    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:bg-gray-100",
-    success: "bg-green-500 text-white hover:bg-green-600 disabled:bg-gray-400",
-    danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400",
-    warning: "bg-yellow-400 text-purple-900 hover:bg-yellow-500 disabled:bg-gray-400",
-    info: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400",
-    outline: "border-2 border-purple-700 text-purple-700 hover:bg-purple-50 disabled:border-gray-300 disabled:text-gray-400",
+    primary: "bg-purple-700 text-white hover:bg-purple-800 hover:shadow-lg disabled:bg-gray-400",
+    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300 hover:shadow-md disabled:bg-gray-100",
+    success: "bg-green-500 text-white hover:bg-green-600 hover:shadow-lg disabled:bg-gray-400",
+    danger: "bg-red-600 text-white hover:bg-red-700 hover:shadow-lg disabled:bg-gray-400",
+    warning: "bg-yellow-400 text-purple-900 hover:bg-yellow-500 hover:shadow-lg disabled:bg-gray-400",
+    info: "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg disabled:bg-gray-400",
+    outline: "border-2 border-purple-700 text-purple-700 hover:bg-purple-50 hover:shadow-md disabled:border-gray-300 disabled:text-gray-400",
   };
 
   const sizes = {
@@ -71,7 +71,7 @@ export function IconButton({ icon, onClick, variant = "primary", title, ...props
     <button
       onClick={onClick}
       title={title}
-      className={`p-2 rounded-lg transition hover:scale-110 ${
+      className={`p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 transform ${
         variant === "danger" ? "text-red-600 hover:bg-red-50" : 
         variant === "primary" ? "text-purple-700 hover:bg-purple-50" :
         "text-gray-600 hover:bg-gray-100"

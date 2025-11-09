@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { vehicleAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import Navbar from "../../components/Navbar";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
@@ -12,6 +12,7 @@ export default function VehicleDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
+  const { startNavigating } = useNavigation();
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,6 +44,8 @@ export default function VehicleDetailPage() {
     try {
       await vehicleAPI.deleteVehicle(params.id);
       alert("Vehicle ad deleted successfully!");
+      // Show loading bar and navigate
+      startNavigating();
       router.push("/my-ads");
     } catch (err) {
       alert("Failed to delete vehicle ad. " + err.message);
@@ -98,11 +101,15 @@ export default function VehicleDetailPage() {
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error || "Vehicle not found"}
           </div>
-          <Link href="/vehicles">
-            <button className="mt-4 bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800 transition">
-              ← Back to Vehicles
-            </button>
-          </Link>
+          <button 
+            onClick={() => {
+              startNavigating();
+              router.push("/vehicles");
+            }}
+            className="mt-4 bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800 transition"
+          >
+            ← Back to Vehicles
+          </button>
         </div>
       </div>
     );
@@ -116,11 +123,15 @@ export default function VehicleDetailPage() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
-        <Link href="/vehicles">
-          <button className="mb-4 text-purple-700 hover:underline flex items-center">
-            ← Back to All Vehicles
-          </button>
-        </Link>
+        <button 
+          onClick={() => {
+            startNavigating();
+            router.push("/vehicles");
+          }}
+          className="mb-4 text-purple-700 hover:underline flex items-center"
+        >
+          ← Back to All Vehicles
+        </button>
 
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -258,11 +269,15 @@ export default function VehicleDetailPage() {
               {/* Owner Actions */}
               {isOwner && (
                 <div className="mt-6 flex gap-4">
-                  <Link href={`/vehicles/${vehicle.id}/edit`}>
-                    <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
-                      ✏️ Edit
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => {
+                      startNavigating();
+                      router.push(`/vehicles/${vehicle.id}/edit`);
+                    }}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
+                  >
+                    ✏️ Edit
+                  </button>
                   <button
                     onClick={handleDelete}
                     className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
@@ -278,11 +293,15 @@ export default function VehicleDetailPage() {
                   <h3 className="font-semibold text-lg mb-2">Interested in this vehicle?</h3>
                   <p className="text-gray-700">Please login to contact the seller.</p>
                   {!user && (
-                    <Link href="/login">
-                      <button className="mt-3 bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800 transition">
-                        Login to Contact
-                      </button>
-                    </Link>
+                    <button 
+                      onClick={() => {
+                        startNavigating();
+                        router.push("/login");
+                      }}
+                      className="mt-3 bg-purple-700 text-white px-6 py-2 rounded-lg hover:bg-purple-800 transition"
+                    >
+                      Login to Contact
+                    </button>
                   )}
                 </div>
               )}
