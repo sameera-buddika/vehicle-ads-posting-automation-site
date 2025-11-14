@@ -19,6 +19,8 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,10 +55,10 @@ export default function RegisterPage() {
       const result = await register(userData);
       
       if (result.success) {
-        alert("Registration successful! Please login.");
-        // Show loading bar and navigate
-        startNavigating();
-        router.push("/login");
+        // Show verification message instead of redirecting
+        setRegistrationSuccess(true);
+        setRegisteredEmail(formData.email);
+        setLoading(false);
       } else {
         setError(result.error || "Registration failed. Please try again.");
         setLoading(false);
@@ -66,6 +68,64 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  // Show verification message after successful registration
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 py-8">
+        <div className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-lg">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📧</div>
+            <h1 className="text-3xl font-bold text-center text-purple-700 mb-4">
+              Check Your Email!
+            </h1>
+            <p className="text-gray-600 mb-4">
+              We've sent a verification email to <strong>{registeredEmail}</strong>
+            </p>
+            <p className="text-gray-600 mb-6">
+              Please click the verification link in the email to activate your account. The link will expire in 1 hour.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Didn't receive the email?</strong> Check your spam folder or click the button below to resend.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  startNavigating();
+                  router.push(`/resend-verification?email=${encodeURIComponent(registeredEmail)}`);
+                }}
+                className="w-full bg-purple-700 text-white py-3 rounded-lg font-semibold hover:bg-purple-800 transition"
+              >
+                Resend Verification Email
+              </button>
+              <button
+                onClick={() => {
+                  startNavigating();
+                  router.push("/login");
+                }}
+                className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+              >
+                Go to Login
+              </button>
+            </div>
+            <p className="text-center mt-6">
+              <button
+                onClick={() => {
+                  startNavigating();
+                  router.push("/");
+                }}
+                className="text-sm text-gray-500 hover:underline"
+              >
+                ← Back to Home
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 py-8">

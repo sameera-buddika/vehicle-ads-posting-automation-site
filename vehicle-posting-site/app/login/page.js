@@ -15,6 +15,7 @@ export default function LoginPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -51,7 +52,16 @@ export default function LoginPage() {
           window.location.href = "/vehicles";
         }
       } else {
-        setError(result?.error || result?.message || "Login failed. Please check your credentials.");
+        const errorMessage = result?.error || result?.message || "Login failed. Please check your credentials.";
+        setError(errorMessage);
+        
+        // Check if error is about email verification
+        if (errorMessage.toLowerCase().includes('verify') || errorMessage.toLowerCase().includes('verification')) {
+          setShowResendVerification(true);
+        } else {
+          setShowResendVerification(false);
+        }
+        
         setLoading(false);
       }
     } catch (err) {
@@ -71,6 +81,20 @@ export default function LoginPage() {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
+            {showResendVerification && (
+              <div className="mt-3 pt-3 border-t border-red-300">
+                <p className="text-sm mb-2">Need to resend the verification email?</p>
+                <button
+                  onClick={() => {
+                    startNavigating();
+                    router.push(`/resend-verification?email=${encodeURIComponent(formData.email)}`);
+                  }}
+                  className="text-sm text-red-700 font-semibold hover:underline"
+                >
+                  Resend Verification Email →
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -64,8 +64,9 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      await authAPI.register(userData);
-      return { success: true };
+      const response = await authAPI.register(userData);
+      // Backend returns message about verification email
+      return { success: true, message: response?.message };
     } catch (error) {
       return { success: false, error: error.message };
     }

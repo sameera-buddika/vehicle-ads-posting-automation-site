@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
+from django.utils import timezone
+from datetime import timedelta
 
 
 class UserManager(BaseUserManager):
@@ -35,7 +37,24 @@ class User(AbstractUser):
     name = models.CharField(max_length=255, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     nic_image_link = models.URLField(blank=True)
+    is_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=100, blank=True, null=True)
+    token_expires_at = models.DateTimeField(blank=True, null=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+    
+    def generate_verification_token(self):
+        """Generate a unique verification token and set expiration to 1 hour"""
+        import secrets
+        self.verification_token = secrets.token_urlsafe(32)
+        self.token_expires_at = timezone.now() + timedelta(hours=1)
+        self.save()
+        return self.verification_token
+    
+    def is_token_valid(self):
+        """Check if the verification token is still valid (not expired)"""
+        if not self.verification_token or not self.token_expires_at:
+            return False
+        return timezone.now() < self.token_expires_at

@@ -87,6 +87,20 @@ export const authAPI = {
       method: 'GET',
     });
   },
+
+  verifyEmail: async (token) => {
+    return apiFetch('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+
+  resendVerification: async (email) => {
+    return apiFetch('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
 };
 
 // Vehicle API

@@ -87,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'dilamp16337',
         'HOST': 'localhost',
         'PORT': '5432',
 
@@ -204,5 +204,23 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'users.views': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
+
+# Email Configuration (Gmail SMTP)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', '')
+SERVER_EMAIL = os.getenv('EMAIL_HOST_USER', '')
+
+# Frontend URL for email verification links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
