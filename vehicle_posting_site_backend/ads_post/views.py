@@ -53,9 +53,21 @@ class VehicleListCreateView(APIView):
 
     def post(self, request):
         from .models import VehicleImage
+        from django.db import IntegrityError
         
         user_id = get_user_id_from_request(request)
         data = request.data.copy()
+        
+        # Check for duplicate plate number if provided
+        plate_number = data.get('plate_number', '').strip()
+        if plate_number:
+            existing_vehicle = Vehicle.objects.filter(plate_number=plate_number).first()
+            if existing_vehicle:
+                return Response({
+                    'detail': f'A vehicle with plate number "{plate_number}" already exists. Each vehicle must have a unique plate number.',
+                    'plate_number': plate_number,
+                    'existing_vehicle_id': existing_vehicle.id
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Remove images from data as we'll handle them separately
         images = request.FILES.getlist('images')
@@ -63,7 +75,16 @@ class VehicleListCreateView(APIView):
         # Create vehicle
         serializer = VehicleSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        vehicle = serializer.save(posted_by_id=user_id)
+        
+        try:
+            vehicle = serializer.save(posted_by_id=user_id)
+        except IntegrityError as e:
+            if 'plate_number' in str(e):
+                return Response({
+                    'detail': f'A vehicle with plate number "{plate_number}" already exists. Each vehicle must have a unique plate number.',
+                    'plate_number': plate_number
+                }, status=status.HTTP_400_BAD_REQUEST)
+            raise
         
         # Add images
         for index, image_file in enumerate(images):
@@ -90,6 +111,7 @@ class VehicleDetailView(APIView):
 
     def put(self, request, ad_id):
         from .models import VehicleImage
+        from django.db import IntegrityError
         
         user_id = get_user_id_from_request(request)
         vehicle = get_object_or_404(Vehicle, id=ad_id)
@@ -97,6 +119,17 @@ class VehicleDetailView(APIView):
             return Response({'detail': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
 
         data = request.data.copy()
+        
+        # Check for duplicate plate number if being changed
+        plate_number = data.get('plate_number', '').strip()
+        if plate_number and plate_number != vehicle.plate_number:
+            existing_vehicle = Vehicle.objects.filter(plate_number=plate_number).exclude(id=ad_id).first()
+            if existing_vehicle:
+                return Response({
+                    'detail': f'A vehicle with plate number "{plate_number}" already exists. Each vehicle must have a unique plate number.',
+                    'plate_number': plate_number,
+                    'existing_vehicle_id': existing_vehicle.id
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Handle new images if provided
         images = request.FILES.getlist('images')
@@ -116,7 +149,17 @@ class VehicleDetailView(APIView):
         # Update vehicle data
         serializer = VehicleSerializer(vehicle, data=data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        
+        try:
+            serializer.save()
+        except IntegrityError as e:
+            if 'plate_number' in str(e):
+                return Response({
+                    'detail': f'A vehicle with plate number "{plate_number}" already exists. Each vehicle must have a unique plate number.',
+                    'plate_number': plate_number
+                }, status=status.HTTP_400_BAD_REQUEST)
+            raise
+        
         return Response(serializer.data)
 
     def delete(self, request, ad_id):

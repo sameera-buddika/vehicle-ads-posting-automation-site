@@ -30,10 +30,11 @@ class VehicleVerificationResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleVerificationResult
         fields = [
-            'id', 'vehicle', 'ai_detected_brand', 'ai_detected_model', 
+            'id', 'vehicle',             'ai_detected_brand', 'ai_detected_model', 
             'ai_detected_vehicle_type', 'ai_detected_fuel_type', 'ai_detected_year',
-            'brand_match_score', 'model_match_score', 'vehicle_type_match_score',
-            'fuel_type_match_score', 'image_quality_score', 'overall_confidence_score',
+            'ai_detected_plate_number', 'brand_match_score', 'model_match_score', 
+            'vehicle_type_match_score', 'fuel_type_match_score', 'plate_number_match_score',
+            'image_quality_score', 'overall_confidence_score',
             'is_vehicle_image', 'images_analyzed_count', 'ai_suggestions', 
             'discrepancies', 'verification_passed', 'requires_manual_review',
             'error_message', 'created_at'
@@ -58,7 +59,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'posted_by', 'category', 'manufacturer', 'model', 'city', 'plate_number',
             'year', 'vehicle_type', 'engine_capacity', 'transmission', 'fuel_type',
-            'mileage', 'price', 'images', 'primary_image', 
+            'mileage', 'price', 'description', 'images', 'primary_image', 
             'verification_status', 'is_verified', 'verification_score', 'latest_verification',
             'created_at', 'updated_at'
         ]

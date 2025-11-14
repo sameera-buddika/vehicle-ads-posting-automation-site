@@ -26,6 +26,7 @@ export default function PostVehicle() {
     fuel_type: "",
     mileage: "",
     price: "",
+    description: "",
   });
   
   const [vehicleImages, setVehicleImages] = useState([]);
@@ -127,7 +128,9 @@ export default function PostVehicle() {
       setLoading(false);
       
     } catch (err) {
-      setError(err.message || "Failed to post vehicle. Please try again.");
+      // Handle duplicate plate number error
+      const errorMessage = err.detail || err.message || "Failed to post vehicle. Please try again.";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -259,7 +262,10 @@ export default function PostVehicle() {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Plate Number</label>
+                <label className="block text-gray-700 font-medium mb-2">
+                  Plate Number <span className="text-red-500">*</span>
+                  <span className="text-sm text-gray-500 font-normal ml-2">(Must be unique)</span>
+                </label>
                 <input
                   type="text"
                   name="plate_number"
@@ -267,7 +273,11 @@ export default function PostVehicle() {
                   value={formData.plate_number}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  The AI will verify this plate number matches the images you upload
+                </p>
               </div>
 
               <div>
@@ -372,6 +382,19 @@ export default function PostVehicle() {
                 value={formData.price}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Description</label>
+              <textarea
+                name="description"
+                placeholder="Provide a detailed description of your vehicle (condition, features, history, etc.)"
+                value={formData.description}
+                onChange={handleChange}
+                rows={5}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-vertical"
               />
             </div>
 

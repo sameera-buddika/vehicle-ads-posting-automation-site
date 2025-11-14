@@ -79,14 +79,16 @@ class VehicleVerificationService:
 - Fuel Type: {vehicle.fuel_type or 'Not specified'}
 - Year: {vehicle.year or 'Not specified'}
 - Transmission: {vehicle.transmission or 'Not specified'}
+- Plate Number: {vehicle.plate_number or 'Not specified'}
 
 **Your Task:**
 1. Verify if the images show an actual vehicle (not random objects, memes, or inappropriate content)
 2. Identify the vehicle's brand, model, type (car/van/suv/truck/motorcycle/etc), and likely fuel type (petrol/diesel/electric/hybrid)
-3. Compare your findings with the user-provided information
-4. Rate the match accuracy for each field (0-100 score)
-5. Assess image quality (clear, well-lit, multiple angles)
-6. Identify any discrepancies or concerns
+3. **IMPORTANT: Carefully detect and read the license plate number from the images. Look for any visible license plates in the images.**
+4. Compare your findings with the user-provided information, especially the plate number
+5. Rate the match accuracy for each field (0-100 score), including plate number match
+6. Assess image quality (clear, well-lit, multiple angles)
+7. Identify any discrepancies or concerns, especially if the detected plate number doesn't match the provided one
 
 **Response Format (JSON):**
 {{
@@ -96,13 +98,15 @@ class VehicleVerificationService:
         "model": "detected model name or closest match",
         "vehicle_type": "car/van/suv/motorcycle/truck/etc",
         "fuel_type": "petrol/diesel/electric/hybrid/unknown",
-        "year_range": "approximate year or range"
+        "year_range": "approximate year or range",
+        "plate_number": "detected license plate number from images (if visible, otherwise null)"
     }},
     "match_scores": {{
         "brand_match": 0-100,
         "model_match": 0-100,
         "vehicle_type_match": 0-100,
         "fuel_type_match": 0-100,
+        "plate_number_match": 0-100 (100 if exact match, 0 if no match, null if plate not visible in images),
         "overall_confidence": 0-100
     }},
     "image_quality": {{
@@ -189,20 +193,43 @@ Provide ONLY valid JSON response, no additional text."""
     def calculate_overall_score(self, match_scores: Dict) -> float:
         """
         Calculate weighted overall verification score
+        Scores are already 0-100, so we calculate weighted average without multiplying by 100 again
         """
-        weights = {
-            'brand_match': 0.30,
-            'model_match': 0.30,
-            'vehicle_type_match': 0.25,
-            'fuel_type_match': 0.15,
-        }
+        # If plate number is provided and detected, include it in scoring
+        has_plate_number = match_scores.get('plate_number_match') is not None
+        
+        if has_plate_number:
+            weights = {
+                'brand_match': 0.20,
+                'model_match': 0.20,
+                'vehicle_type_match': 0.15,
+                'fuel_type_match': 0.10,
+                'plate_number_match': 0.35,  # Higher weight for plate number match
+            }
+        else:
+            weights = {
+                'brand_match': 0.30,
+                'model_match': 0.30,
+                'vehicle_type_match': 0.25,
+                'fuel_type_match': 0.15,
+            }
         
         total_score = 0.0
+        total_weight = 0.0
         for field, weight in weights.items():
-            score = match_scores.get(field, 0)
-            total_score += score * weight
+            score = match_scores.get(field)
+            if score is not None:
+                # Score is already 0-100, multiply by weight
+                total_score += score * weight
+                total_weight += weight
         
-        return round(total_score, 2)
+        # Calculate weighted average (scores are already 0-100, so result is 0-100)
+        # No need to multiply by 100 again
+        if total_weight > 0:
+            weighted_average = total_score / total_weight
+            logger.debug(f"Score calculation: total_score={total_score}, total_weight={total_weight}, result={weighted_average}")
+            return round(weighted_average, 2)
+        return 0.0
     
     def save_verification_result(
         self, 
@@ -218,16 +245,43 @@ Provide ONLY valid JSON response, no additional text."""
         match_scores = ai_response.get('match_scores', {})
         image_quality = ai_response.get('image_quality', {})
         
+        # Check plate number match - if plate number doesn't match, require manual review
+        plate_number_match = match_scores.get('plate_number_match')
+        detected_plate = detected_info.get('plate_number')
+        requires_manual_review_plate = False
+        
+        # If plate number was provided but doesn't match detected one, flag for review
+        if vehicle.plate_number and detected_plate:
+            if plate_number_match is not None and plate_number_match < 100:
+                requires_manual_review_plate = True
+                if 'discrepancies' not in ai_response:
+                    ai_response['discrepancies'] = []
+                ai_response['discrepancies'].append(
+                    f"Plate number mismatch: Provided '{vehicle.plate_number}' but detected '{detected_plate}'"
+                )
+        
         # Calculate overall score
         overall_score = self.calculate_overall_score(match_scores)
         
         # Determine if verification passed
         verification_passed = ai_response.get('verification_passed', False)
-        requires_manual_review = ai_response.get('requires_manual_review', False)
+        is_vehicle_image = ai_response.get('is_vehicle_image', False)
+        ai_requires_review = ai_response.get('requires_manual_review', False)
+        requires_manual_review = ai_requires_review or requires_manual_review_plate
         
-        # Auto-determine manual review based on score
-        if overall_score < self.MANUAL_REVIEW_THRESHOLD:
+        # Determine manual review status based on conditions
+        if not is_vehicle_image:
+            # Not a vehicle image - it's a failure, not manual review
+            requires_manual_review = False
+        elif ai_requires_review or requires_manual_review_plate:
+            # AI explicitly requires manual review (e.g., plate mismatch) - keep it
             requires_manual_review = True
+        elif overall_score >= self.MANUAL_REVIEW_THRESHOLD and overall_score < self.PASS_THRESHOLD:
+            # Score between 50-70: requires manual review
+            requires_manual_review = True
+        else:
+            # Score < 50 or other failure conditions: it's a failure, not manual review
+            requires_manual_review = False
         
         # Create verification result
         verification_result = VehicleVerificationResult.objects.create(
@@ -238,11 +292,13 @@ Provide ONLY valid JSON response, no additional text."""
             ai_detected_vehicle_type=detected_info.get('vehicle_type'),
             ai_detected_fuel_type=detected_info.get('fuel_type'),
             ai_detected_year=detected_info.get('year_range'),
+            ai_detected_plate_number=detected_plate,
             # Match scores
             brand_match_score=match_scores.get('brand_match'),
             model_match_score=match_scores.get('model_match'),
             vehicle_type_match_score=match_scores.get('vehicle_type_match'),
             fuel_type_match_score=match_scores.get('fuel_type_match'),
+            plate_number_match_score=plate_number_match,
             image_quality_score=image_quality.get('score'),
             overall_confidence_score=overall_score,
             # Image validation
@@ -257,21 +313,43 @@ Provide ONLY valid JSON response, no additional text."""
             requires_manual_review=requires_manual_review,
         )
         
-        # Update vehicle verification status
-        if verification_passed and overall_score >= self.PASS_THRESHOLD:
-            vehicle.verification_status = 'verified'
-            vehicle.is_verified = True
-        elif requires_manual_review or overall_score < self.MANUAL_REVIEW_THRESHOLD:
-            vehicle.verification_status = 'manual_review'
-            vehicle.is_verified = False
-        else:
+        # Update vehicle verification status based on score and conditions
+        # Priority: 1) Not a vehicle image = failed, 2) Score >= 70 = verified, 3) Score 50-70 or explicit review = manual_review, 4) Score < 50 = failed
+        
+        if not is_vehicle_image:
+            # Not a vehicle image - actual failure (highest priority)
             vehicle.verification_status = 'failed'
             vehicle.is_verified = False
+            logger.info(f"Vehicle {vehicle.id}: Not a vehicle image - setting status to 'failed'")
+        elif overall_score >= self.PASS_THRESHOLD:
+            # Score >= 70: verified (rely on score, not just AI's verification_passed flag)
+            vehicle.verification_status = 'verified'
+            vehicle.is_verified = True
+            logger.info(f"Vehicle {vehicle.id}: Score {overall_score} >= {self.PASS_THRESHOLD} - setting status to 'verified'")
+        elif requires_manual_review:
+            # Explicitly requires manual review (plate mismatch, AI flag, or score 50-70)
+            vehicle.verification_status = 'manual_review'
+            vehicle.is_verified = False
+            logger.info(f"Vehicle {vehicle.id}: Requires manual review (score: {overall_score}) - setting status to 'manual_review'")
+        elif overall_score >= self.MANUAL_REVIEW_THRESHOLD and overall_score < self.PASS_THRESHOLD:
+            # Score between 50-70: requires manual review
+            vehicle.verification_status = 'manual_review'
+            vehicle.is_verified = False
+            logger.info(f"Vehicle {vehicle.id}: Score {overall_score} between {self.MANUAL_REVIEW_THRESHOLD}-{self.PASS_THRESHOLD} - setting status to 'manual_review'")
+        else:
+            # Score < 50 or other failure conditions: actual failure
+            vehicle.verification_status = 'failed'
+            vehicle.is_verified = False
+            logger.info(f"Vehicle {vehicle.id}: Score {overall_score} < {self.MANUAL_REVIEW_THRESHOLD} - setting status to 'failed'")
         
         vehicle.verification_score = overall_score
         vehicle.verification_attempts += 1
         vehicle.last_verification_at = datetime.now()
         vehicle.save()
+        
+        # Refresh from database to ensure we have the latest status
+        vehicle.refresh_from_db()
+        logger.info(f"Vehicle {vehicle.id}: Final verification_status = '{vehicle.verification_status}', score = {overall_score}")
         
         return verification_result
     
@@ -323,6 +401,7 @@ Provide ONLY valid JSON response, no additional text."""
                     vehicle=vehicle,
                     error_message=api_response['error'],
                     verification_passed=False,
+                    requires_manual_review=False,
                     images_analyzed_count=len(image_urls)
                 )
                 

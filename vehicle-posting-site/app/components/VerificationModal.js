@@ -201,6 +201,25 @@ export default function VerificationModal({
                     <p className="font-semibold text-gray-800">{result.ai_detected_fuel_type}</p>
                   </div>
                 )}
+                
+                {result.ai_detected_plate_number && (
+                  <div className={`p-3 rounded-lg ${
+                    result.plate_number_match_score === 100 
+                      ? 'bg-green-50 border-2 border-green-200' 
+                      : result.plate_number_match_score !== null && result.plate_number_match_score < 100
+                      ? 'bg-yellow-50 border-2 border-yellow-200'
+                      : 'bg-gray-50'
+                  }`}>
+                    <p className="text-xs text-gray-500 uppercase">Detected Plate Number</p>
+                    <p className="font-semibold text-gray-800">{result.ai_detected_plate_number}</p>
+                    {result.plate_number_match_score === 100 && (
+                      <p className="text-xs text-green-600 mt-1">✓ Matches provided plate number</p>
+                    )}
+                    {result.plate_number_match_score !== null && result.plate_number_match_score < 100 && (
+                      <p className="text-xs text-yellow-600 mt-1">⚠ Does not match provided plate number</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -280,6 +299,36 @@ export default function VerificationModal({
                     </div>
                   </div>
                 )}
+                
+                {result.plate_number_match_score !== null && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600 flex items-center gap-2">
+                        Plate Number Match
+                        {result.plate_number_match_score === 100 && (
+                          <span className="text-green-600">✓</span>
+                        )}
+                        {result.plate_number_match_score < 100 && (
+                          <span className="text-yellow-600">⚠</span>
+                        )}
+                      </span>
+                      <span className={`font-semibold ${getScoreColor(result.plate_number_match_score)}`}>
+                        {result.plate_number_match_score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-full ${getScoreBarColor(result.plate_number_match_score)} rounded-full`}
+                        style={{ width: `${result.plate_number_match_score}%` }}
+                      />
+                    </div>
+                    {result.plate_number_match_score < 100 && (
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Plate number mismatch detected. This will require manual review.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -316,47 +365,58 @@ export default function VerificationModal({
           )}
 
           {/* Action Buttons */}
-          {!config.showSpinner && (
-            <div className="border-t pt-6 flex gap-3">
-              {verificationResult?.verification_status === 'failed' && onRetry && (
-                <button
-                  onClick={onRetry}
-                  className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold"
-                >
-                  🔄 Retry Verification
-                </button>
-              )}
-              
-              {verificationResult?.verification_status === 'verified' && (
-                <button
-                  onClick={onClose}
-                  className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition font-semibold"
-                >
-                  ✓ Continue to My Ads
-                </button>
-              )}
-              
-              {verificationResult?.verification_status === 'manual_review' && (
-                <button
-                  onClick={onClose}
-                  className="flex-1 bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition font-semibold"
-                >
-                  Continue (Pending Review)
-                </button>
-              )}
-              
-              {verificationResult?.verification_status !== 'verified' && 
-               verificationResult?.verification_status !== 'manual_review' &&
-               verificationResult?.verification_status !== 'failed' && (
-                <button
-                  onClick={onClose}
-                  className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition font-semibold"
-                >
-                  Close
-                </button>
-              )}
-            </div>
-          )}
+          {!config.showSpinner && (() => {
+            const status = verificationResult?.verification_status;
+            
+            return (
+              <div className="border-t pt-6 flex gap-3">
+                {(status === 'failed' || status === 'manual_review') && onRetry && (
+                  <button
+                    onClick={onRetry}
+                    className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold"
+                  >
+                    🔄 Retry Verification
+                  </button>
+                )}
+                
+                {status === 'verified' && (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition font-semibold"
+                  >
+                    ✓ Continue to My Ads
+                  </button>
+                )}
+                
+                {status === 'manual_review' && (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-700 transition font-semibold"
+                  >
+                    Continue (Pending Review)
+                  </button>
+                )}
+                
+                {status === 'failed' && (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-semibold"
+                  >
+                    Close
+                  </button>
+                )}
+                
+                {status !== 'verified' && status !== 'manual_review' && status !== 'failed' && (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition font-semibold"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

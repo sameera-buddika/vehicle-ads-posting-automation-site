@@ -254,6 +254,16 @@ export default function VehicleDetailPage() {
                 )}
               </div>
 
+              {/* Description */}
+              {vehicle.description && (
+                <div className="border-t pt-4 mt-6">
+                  <h3 className="text-xl font-bold text-purple-700 mb-3">Description</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {vehicle.description}
+                  </p>
+                </div>
+              )}
+
               {/* Timestamps */}
               <div className="border-t pt-4 mt-6">
                 <p className="text-sm text-gray-600">

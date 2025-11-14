@@ -22,7 +22,7 @@ class Vehicle(models.Model):
     manufacturer = models.CharField(max_length=120)
     model = models.CharField(max_length=120)
     city = models.CharField(max_length=120, blank=True, null=True)
-    plate_number = models.CharField(max_length=50, blank=True, null=True)
+    plate_number = models.CharField(max_length=50, blank=True, null=True, unique=True, db_index=True)
     year = models.PositiveSmallIntegerField(blank=True, null=True)
     vehicle_type = models.CharField(max_length=80, blank=True, null=True)
     engine_capacity = models.CharField(max_length=50, blank=True, null=True)
@@ -30,6 +30,7 @@ class Vehicle(models.Model):
     fuel_type = models.CharField(max_length=50, blank=True, null=True)
     mileage = models.CharField(max_length=50, blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    description = models.TextField(blank=True, null=True, help_text="Detailed description of the vehicle")
     
     # Verification fields
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_STATUS_CHOICES, default='pending')
@@ -67,12 +68,14 @@ class VehicleVerificationResult(models.Model):
     ai_detected_vehicle_type = models.CharField(max_length=80, null=True, blank=True)
     ai_detected_fuel_type = models.CharField(max_length=50, null=True, blank=True)
     ai_detected_year = models.CharField(max_length=20, null=True, blank=True)
+    ai_detected_plate_number = models.CharField(max_length=50, null=True, blank=True, help_text="Plate number detected from images by AI")
     
     # Verification scores (0-100)
     brand_match_score = models.FloatField(null=True, blank=True)
     model_match_score = models.FloatField(null=True, blank=True)
     vehicle_type_match_score = models.FloatField(null=True, blank=True)
     fuel_type_match_score = models.FloatField(null=True, blank=True)
+    plate_number_match_score = models.FloatField(null=True, blank=True, help_text="Match score for plate number (0-100)")
     image_quality_score = models.FloatField(null=True, blank=True)
     overall_confidence_score = models.FloatField(null=True, blank=True)
     

@@ -41,7 +41,12 @@ async function apiFetch(endpoint, options = {}) {
       if (response.status !== 401) {
         console.error('API Error:', data.detail || data.message || 'API request failed');
       }
-      throw new Error(data.detail || data.message || 'API request failed');
+      const error = new Error(data.detail || data.message || 'API request failed');
+      // Attach full error data for better error handling
+      error.detail = data.detail;
+      error.message = data.detail || data.message || 'API request failed';
+      error.data = data;
+      throw error;
     }
 
     return data;
