@@ -26,6 +26,7 @@ export default function EditVehiclePage() {
     fuel_type: "",
     mileage: "",
     price: "",
+    description: "",
   });
   
   const [vehicleImage, setVehicleImage] = useState(null);
@@ -61,6 +62,7 @@ export default function EditVehiclePage() {
         fuel_type: data.fuel_type || "",
         mileage: data.mileage || "",
         price: data.price || "",
+        description: data.description || "",
       });
       
       // Set current image - check multiple possible sources
@@ -115,7 +117,9 @@ export default function EditVehiclePage() {
       router.push("/my-ads");
       
     } catch (err) {
-      setError(err.message || "Failed to update vehicle. Please try again.");
+      // Handle duplicate plate number error
+      const errorMessage = err.detail || err.message || "Failed to update vehicle. Please try again.";
+      setError(errorMessage);
       setSubmitting(false);
     }
   };
@@ -213,7 +217,10 @@ export default function EditVehiclePage() {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Plate Number</label>
+                <label className="block text-gray-700 font-medium mb-2">
+                  Plate Number <span className="text-red-500">*</span>
+                  <span className="text-sm text-gray-500 font-normal ml-2">(Must be unique)</span>
+                </label>
                 <input
                   type="text"
                   name="plate_number"
@@ -221,7 +228,11 @@ export default function EditVehiclePage() {
                   value={formData.plate_number}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Each vehicle must have a unique plate number
+                </p>
               </div>
 
               <div>
@@ -326,6 +337,19 @@ export default function EditVehiclePage() {
                 value={formData.price}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Description</label>
+              <textarea
+                name="description"
+                placeholder="Provide a detailed description of your vehicle (condition, features, history, etc.)"
+                value={formData.description}
+                onChange={handleChange}
+                rows={5}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-vertical"
               />
             </div>
 

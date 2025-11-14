@@ -26,12 +26,14 @@ export default function PostVehicle() {
     fuel_type: "",
     mileage: "",
     price: "",
+    description: "",
   });
   
   const [vehicleImages, setVehicleImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Verification states
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -51,6 +53,27 @@ export default function PostVehicle() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setVehicleImages(files);
+      const previews = files.map(file => URL.createObjectURL(file));
+      setImagePreviews(previews);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
     if (files.length > 0) {
       setVehicleImages(files);
       const previews = files.map(file => URL.createObjectURL(file));
@@ -127,7 +150,9 @@ export default function PostVehicle() {
       setLoading(false);
       
     } catch (err) {
-      setError(err.message || "Failed to post vehicle. Please try again.");
+      // Handle duplicate plate number error
+      const errorMessage = err.detail || err.message || "Failed to post vehicle. Please try again.";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -259,7 +284,10 @@ export default function PostVehicle() {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Plate Number</label>
+                <label className="block text-gray-700 font-medium mb-2">
+                  Plate Number <span className="text-red-500">*</span>
+                  <span className="text-sm text-gray-500 font-normal ml-2">(Must be unique)</span>
+                </label>
                 <input
                   type="text"
                   name="plate_number"
@@ -267,7 +295,11 @@ export default function PostVehicle() {
                   value={formData.plate_number}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  The AI will verify this plate number matches the images you upload
+                </p>
               </div>
 
               <div>
@@ -375,41 +407,105 @@ export default function PostVehicle() {
               />
             </div>
 
+            {/* Description */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Description</label>
+              <textarea
+                name="description"
+                placeholder="Provide a detailed description of your vehicle (condition, features, history, etc.)"
+                value={formData.description}
+                onChange={handleChange}
+                rows={5}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-vertical"
+              />
+            </div>
+
             {/* Images Upload */}
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Vehicle Images (Multiple)</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              />
-              <p className="text-sm text-gray-500 mt-1">Select multiple images (first image will be primary)</p>
+              <label className="block text-gray-700 font-medium mb-3">Vehicle Images</label>
               
+              {/* Upload Area */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+                  isDragging
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-purple-300 bg-purple-50/50 hover:border-purple-400 hover:bg-purple-50'
+                }`}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  id="vehicle-images-input"
+                />
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="text-5xl">📸</div>
+                  <div className="space-y-1">
+                    <p className="text-gray-700 font-semibold">
+                      {imagePreviews.length > 0 
+                        ? `${imagePreviews.length} image${imagePreviews.length > 1 ? 's' : ''} selected`
+                        : 'Click to upload or drag and drop'
+                      }
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {imagePreviews.length > 0 
+                        ? 'Click to change or add more images'
+                        : 'PNG, JPG, GIF up to 10MB (first image will be primary)'
+                      }
+                    </p>
+                  </div>
+                  {imagePreviews.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('vehicle-images-input').click()}
+                      className="mt-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                    >
+                      Browse Files
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Image Previews */}
               {imagePreviews.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
-                      />
-                      {index === 0 && (
-                        <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                          Primary
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-6">
+                  <p className="text-sm text-gray-600 mb-3 font-medium">
+                    {imagePreviews.length} image{imagePreviews.length > 1 ? 's' : ''} selected
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative group">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-400 transition">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {index === 0 && (
+                            <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded font-semibold shadow-md">
+                              Primary
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 transition shadow-md opacity-0 group-hover:opacity-100"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1 text-center truncate">
+                          Image {index + 1}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
