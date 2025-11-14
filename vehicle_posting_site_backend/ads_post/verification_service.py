@@ -326,21 +326,33 @@ Provide ONLY valid JSON response, no additional text."""
             vehicle.verification_status = 'verified'
             vehicle.is_verified = True
             logger.info(f"Vehicle {vehicle.id}: Score {overall_score} >= {self.PASS_THRESHOLD} - setting status to 'verified'")
-        elif requires_manual_review:
-            # Explicitly requires manual review (plate mismatch, AI flag, or score 50-70)
-            vehicle.verification_status = 'manual_review'
+        elif overall_score < self.MANUAL_REVIEW_THRESHOLD:
+            # Score < 50: actual failure (regardless of other flags)
+            vehicle.verification_status = 'failed'
             vehicle.is_verified = False
-            logger.info(f"Vehicle {vehicle.id}: Requires manual review (score: {overall_score}) - setting status to 'manual_review'")
+            logger.info(f"Vehicle {vehicle.id}: Score {overall_score} < {self.MANUAL_REVIEW_THRESHOLD} - setting status to 'failed'")
         elif overall_score >= self.MANUAL_REVIEW_THRESHOLD and overall_score < self.PASS_THRESHOLD:
             # Score between 50-70: requires manual review
             vehicle.verification_status = 'manual_review'
             vehicle.is_verified = False
             logger.info(f"Vehicle {vehicle.id}: Score {overall_score} between {self.MANUAL_REVIEW_THRESHOLD}-{self.PASS_THRESHOLD} - setting status to 'manual_review'")
+        elif requires_manual_review:
+            # Explicitly requires manual review (plate mismatch or AI flag) - but only if score >= 50
+            # If score < 50, it should already be 'failed' from above condition
+            if overall_score >= self.MANUAL_REVIEW_THRESHOLD:
+                vehicle.verification_status = 'manual_review'
+                vehicle.is_verified = False
+                logger.info(f"Vehicle {vehicle.id}: Requires manual review (score: {overall_score}) - setting status to 'manual_review'")
+            else:
+                # Score < 50 but has review flag - still mark as failed
+                vehicle.verification_status = 'failed'
+                vehicle.is_verified = False
+                logger.info(f"Vehicle {vehicle.id}: Score {overall_score} < {self.MANUAL_REVIEW_THRESHOLD} with review flag - setting status to 'failed'")
         else:
-            # Score < 50 or other failure conditions: actual failure
+            # Fallback: any other case should be failed
             vehicle.verification_status = 'failed'
             vehicle.is_verified = False
-            logger.info(f"Vehicle {vehicle.id}: Score {overall_score} < {self.MANUAL_REVIEW_THRESHOLD} - setting status to 'failed'")
+            logger.warning(f"Vehicle {vehicle.id}: Unexpected condition - score: {overall_score}, is_vehicle: {is_vehicle_image}, requires_review: {requires_manual_review} - setting status to 'failed'")
         
         vehicle.verification_score = overall_score
         vehicle.verification_attempts += 1

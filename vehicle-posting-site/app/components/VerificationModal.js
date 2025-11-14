@@ -27,6 +27,7 @@ export default function VerificationModal({
       },
       verified: {
         title: 'Verification Successful!',
+        subtitle: 'Your vehicle listing has been verified and is ready to publish',
         icon: '✅',
         color: 'green',
         bgColor: 'bg-green-50',
@@ -36,6 +37,7 @@ export default function VerificationModal({
       },
       manual_review: {
         title: 'Manual Review Required',
+        subtitle: 'Your listing is pending admin review and will be published once approved',
         icon: '⚠️',
         color: 'yellow',
         bgColor: 'bg-yellow-50',
@@ -45,6 +47,7 @@ export default function VerificationModal({
       },
       failed: {
         title: 'Verification Failed',
+        subtitle: 'Your listing needs corrections before it can be verified',
         icon: '❌',
         color: 'red',
         bgColor: 'bg-red-50',
@@ -97,6 +100,11 @@ export default function VerificationModal({
                 {config.showSpinner && (
                   <p className="text-sm text-gray-600 mt-1">
                     Please wait while we verify your vehicle details...
+                  </p>
+                )}
+                {config.subtitle && !config.showSpinner && (
+                  <p className={`text-sm ${config.textColor} opacity-80 mt-1`}>
+                    {config.subtitle}
                   </p>
                 )}
               </div>
@@ -158,9 +166,14 @@ export default function VerificationModal({
                   </p>
                 )}
                 {score < 50 && (
-                  <p className="text-red-600 font-medium">
-                    ✗ Verification failed. Please check your details and images.
-                  </p>
+                  <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                    <p className="text-red-800 font-semibold mb-1">
+                      ✗ Verification Failed
+                    </p>
+                    <p className="text-red-700 text-sm">
+                      The confidence score is below the required threshold. Please review the issues below and update your listing details or images.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -340,14 +353,49 @@ export default function VerificationModal({
                 <span>⚠️</span>
                 <span>Issues Found</span>
               </h3>
-              <ul className="space-y-2">
-                {result.discrepancies.map((issue, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    <span>{issue}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <ul className="space-y-2">
+                  {result.discrepancies.map((issue, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-red-800">
+                      <span className="text-red-600 font-bold mt-0.5">✗</span>
+                      <span className="font-medium">{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message for Failed Status */}
+          {verificationResult?.verification_status === 'failed' && result?.error_message && (
+            <div className="border-t pt-6">
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <h3 className="font-semibold text-lg mb-2 text-red-800 flex items-center gap-2">
+                  <span>❌</span>
+                  <span>Error Details</span>
+                </h3>
+                <p className="text-red-700 text-sm">{result.error_message}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Not a Vehicle Image Warning */}
+          {verificationResult?.verification_status === 'failed' && result?.is_vehicle_image === false && (
+            <div className="border-t pt-6">
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-2 text-red-800 flex items-center gap-2">
+                  <span>🚫</span>
+                  <span>Image Validation Failed</span>
+                </h3>
+                <p className="text-red-700 text-sm mb-2">
+                  The uploaded images do not appear to show a vehicle. Please upload clear images of your vehicle.
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1 ml-2">
+                  <li>Ensure images clearly show the vehicle</li>
+                  <li>Remove any non-vehicle images</li>
+                  <li>Use high-quality, well-lit photos</li>
+                </ul>
+              </div>
             </div>
           )}
 
@@ -356,11 +404,39 @@ export default function VerificationModal({
             <div className="border-t pt-6">
               <h3 className="font-semibold text-lg mb-3 text-gray-800 flex items-center gap-2">
                 <span>💡</span>
-                <span>Suggestions</span>
+                <span>Suggestions to Improve</span>
               </h3>
-              <p className="text-sm text-gray-700 bg-blue-50 p-4 rounded-lg">
-                {result.ai_suggestions}
-              </p>
+              <div className={`p-4 rounded-lg ${
+                verificationResult?.verification_status === 'failed' 
+                  ? 'bg-yellow-50 border-2 border-yellow-300' 
+                  : 'bg-blue-50'
+              }`}>
+                <p className={`text-sm ${
+                  verificationResult?.verification_status === 'failed'
+                    ? 'text-yellow-900 font-medium'
+                    : 'text-gray-700'
+                }`}>
+                  {result.ai_suggestions}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Failed Status Help Section */}
+          {verificationResult?.verification_status === 'failed' && (
+            <div className="border-t pt-6">
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-5">
+                <h3 className="font-semibold text-lg mb-3 text-red-800 flex items-center gap-2">
+                  <span>📋</span>
+                  <span>What to Do Next</span>
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-red-800">
+                  <li className="font-medium">Review the issues and discrepancies listed above</li>
+                  <li className="font-medium">Update your vehicle details to match the detected information</li>
+                  <li className="font-medium">Upload clear, high-quality images of your vehicle</li>
+                  <li className="font-medium">Click "Retry Verification" to verify again after making corrections</li>
+                </ol>
+              </div>
             </div>
           )}
 
@@ -370,7 +446,7 @@ export default function VerificationModal({
             
             return (
               <div className="border-t pt-6 flex gap-3">
-                {(status === 'failed' || status === 'manual_review') && onRetry && (
+                {status === 'manual_review' && onRetry && (
                   <button
                     onClick={onRetry}
                     className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold"
@@ -398,12 +474,23 @@ export default function VerificationModal({
                 )}
                 
                 {status === 'failed' && (
-                  <button
-                    onClick={onClose}
-                    className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-semibold"
-                  >
-                    Close
-                  </button>
+                  <>
+                    {onRetry && (
+                      <button
+                        onClick={onRetry}
+                        className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition font-semibold flex items-center justify-center gap-2"
+                      >
+                        <span>🔄</span>
+                        <span>Retry Verification</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={onClose}
+                      className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition font-semibold"
+                    >
+                      Review & Edit Listing
+                    </button>
+                  </>
                 )}
                 
                 {status !== 'verified' && status !== 'manual_review' && status !== 'failed' && (
